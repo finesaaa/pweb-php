@@ -34,6 +34,7 @@
             <tr>
               <th scope="col">No</th>
               <th scope="col">Nama</th>
+              <th scope="col">Foto</th>
               <th scope="col">Alamat</th>
               <th scope="col">Jenis Kelamin</th>
               <th scope="col">Agama</th>
@@ -61,6 +62,11 @@
             <div class="form-floating mb-3">
               <input type="text" class="form-control" name="nama" id="nama" placeholder="Nama Lengkap" required>
               <label for="nama">Nama Lengkap</label>
+            </div>
+            <div class="mb-3">
+              <label for="foto" class="form-label">Foto</label>
+              <input class="form-control" type="file" name="foto" id="foto" accept=".png, .jpg, .jpeg">
+              <img src="" style="height: 100px; width: 100px; object-fit: cover;" id="previewImg">
             </div>
             <div class="form-floating mb-3">
               <textarea class="form-control" placeholder="Alamat" name="alamat" id="alamat" style="height: 100px" required></textarea>
@@ -105,7 +111,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
   $(document).ready(() => {
     $.ajax({
@@ -116,21 +122,21 @@
           if (element) {
             let data = JSON.parse(element);
             if (!data) return;
-
             $('#listSiswa').append(`
-              <tr>
-                <td>${data.id}</td>
-                <td>${data.nama}</td>
-                <td>${data.alamat}</td>
-                <td>${data.jenis_kelamin}</td>
-                <td>${data.agama}</td>
-                <td>${data.sekolah_asal}</td>
-                <td>
-                    <button class="btn btn-warning btn-sm text-white" type="button" data-bs-toggle="modal" data-bs-target="#editModal" onclick="getDataSiswa(${data.id})">Edit</button>&nbsp;
-                    <button class="btn btn-danger btn-sm" onclick="deleteData(${data.id})">Hapus</button>
-                </td>
-              </tr>
-              `)
+            <tr>
+              <td>${data.id}</td>
+              <td>${data.nama}</td>
+              <td><img src="img/${data.foto}" alt="Foto ${data.nama}" style="width: 100px; height: 100px; object-fit: cover;" /></td>
+              <td>${data.alamat}</td>
+              <td>${data.jenis_kelamin}</td>
+              <td>${data.agama}</td>
+              <td>${data.sekolah_asal}</td>
+              <td>
+                  <button type="button" class="btn btn-warning btn-sm text-white" data-bs-toggle="modal" data-bs-target="#editModal" onclick="getDataSiswa(${data.id})">Edit</button>&nbsp;
+                  <button class="btn btn-danger btn-sm" onclick="deleteData(${data.id})">Hapus</button>
+              </td>
+            </tr>
+            `)
           }
         });
       }
@@ -138,6 +144,7 @@
   });
 
   const getDataSiswa = (id => {
+    $('#form-edit')[0].reset();
     $.ajax({
       type: 'GET',
       url: "read-data.php?id=" + id,
@@ -145,6 +152,8 @@
         let data = JSON.parse(resultData);
         $('#edit-btn').data('id', id);
         $('#nama').val(data.nama);
+        $('#previewImg').attr('src', `img/${data.foto}`);
+        $('#previewImg').addClass('mt-3');
         $('#jenis_kelamin option[value=' + data.jenis_kelamin + ']').attr('selected', 'selected');
         $('#agama option[value=' + data.agama + ']').attr('selected', 'selected');
         $('#sekolah_asal').val(data.sekolah_asal);
@@ -153,7 +162,22 @@
     });
   });
 
+  $('#foto').change(function(e) {
+    if (e.target.files && e.target.files[0]) {
+      let reader = new FileReader();
+
+      reader.onload = function(e) {
+        $('#previewImg').addClass('mt-3');
+        $('#previewImg').attr('src', e.target.result);
+      }
+
+      reader.readAsDataURL(e.target.files[0]);
+    }
+  });
+
   $('#edit-btn').on('click', () => {
+    var form = $('#form-edit')[0];
+    var formData = new FormData(form);
     let dataSiswa = {
       id: $('#edit-btn').data('id'),
       nama: $('#nama').val(),
@@ -171,18 +195,31 @@
       !dataSiswa.alamat.length) flag = true
 
     if (!flag) {
+      formData.append('id', dataSiswa.id);
+      formData.append('nama', dataSiswa.nama);
+      formData.append('jenis_kelamin', dataSiswa.jenis_kelamin);
+      formData.append('agama', dataSiswa.agama);
+      formData.append('sekolah_asal', dataSiswa.sekolah_asal);
+      formData.append('alamat', dataSiswa.alamat);
+
+      var file = $('#foto')[0].files[0]
+      if (file) formData.append('foto', file);
       $.ajax({
         type: 'POST',
+        enctype: 'multipart/form-data',
         url: "update.php",
-        data: dataSiswa,
+        data: formData,
+        processData: false,
+        contentType: false,
         success: function(resultData) {
           Swal.fire({
             icon: 'success',
             title: 'Perbarui Data Berhasil',
-            text: 'Data Anda berhasil diperbarui',
+            text: 'Data berhasil diperbarui',
             heightAuto: false
           }).then((result) => {
             if (result.isConfirmed) {
+              form.reset();
               location.reload();
             }
           })
@@ -192,7 +229,7 @@
       Swal.fire({
         icon: 'error',
         title: 'Terjadi Kesalahan',
-        text: 'Periksa kembali data yang Anda masukkan',
+        text: 'Periksa kembali data yang dimasukkan',
         heightAuto: false
       });
     }
@@ -201,7 +238,7 @@
   const deleteData = (id => {
     Swal.fire({
       title: 'Hapus Data?',
-      text: "Apakah Anda yakin akan menghapus data pendaftaran? Tindakan ini tidak bisa dibatalkan.",
+      text: "Apakah yakin akan menghapus data pendaftaran? Tindakan ini tidak bisa dibatalkan.",
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#dc3545',
@@ -217,7 +254,7 @@
             Swal.fire({
               icon: 'success',
               title: 'Hapus data berhasil',
-              text: 'Data Anda berhasil dihapus',
+              text: 'Data berhasil dihapus',
               heightAuto: false
             }).then((result) => {
               if (result.isConfirmed) {

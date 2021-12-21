@@ -15,7 +15,7 @@ if($_SERVER['REQUEST_METHOD'] == 'GET'){
             "sekolah_asal" => $siswa["sekolah_asal"],
             "alamat" => $siswa["alamat"],
             "nama" => $siswa["nama"],
-            
+            "foto" => $siswa["foto"],
         ]);
         echo "\n";
     }
